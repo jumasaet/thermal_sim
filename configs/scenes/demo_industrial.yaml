@@ -1,0 +1,151 @@
+# Escena de demostración: nave industrial con un tubo caliente y una anomalía térmica.
+# La carga pseudo_thermal/config.py y la construye pseudo_thermal/scene_builder.py.
+#
+# Convenciones: metros, grados Celsius, stage +Z arriba. Colores RGB 0..1.
+# Una clave desconocida, un campo que falte o un nombre repetido es un error al arrancar
+# (antes de abrir Isaac Sim), con el archivo y el campo en el mensaje.
+
+# ---------------------------------------------------------------------------------------
+# Modelo térmico
+# ---------------------------------------------------------------------------------------
+thermal:
+  # [T mín, T máx] en °C que se mapea a gris 0..255 (y a los extremos de la barra de escala).
+  # Lo que quede fuera se satura. El fondo (cielo, píxeles sin prim) se pinta a T mín.
+  range_c: [15.0, 160.0]
+  # Temperatura en °C de los objetos que no declaran temperature_c.
+  default_c: 22.0
+  # +- °C alrededor de default_c. Cada objeto sin temperatura recibe un offset fijo, derivado
+  # del hash de su prim path, para que se distingan entre sí. 0 = todos exactamente a default_c.
+  default_spread_c: 2.0
+
+# ---------------------------------------------------------------------------------------
+# Objetos. El prim path de cada uno es /World/<name>.
+#
+#   name           identificador USD único (letras, dígitos, '_'). Reservados: Looks, Lights,
+#                  Robot, ThermalCamera.
+#   type           box | cylinder | sphere
+#   position       [x, y, z] del centro, m
+#   size           (box) [x, y, z], m
+#   radius         (cylinder, sphere) m
+#   height         (cylinder) longitud a lo largo de axis, m
+#   axis           (cylinder) X | Y | Z
+#   color          [r, g, b] 0..1, color difuso del material OmniPBR (solo afecta al RGB y,
+#                  vía luminancia, al sombreado de la imagen térmica)
+#   roughness      0..1 (opcional, 0.6 por defecto)
+#   metallic       0..1 (opcional, 0.0 por defecto)
+#   temperature_c  °C (opcional). Sin él: default_c +- default_spread_c.
+# ---------------------------------------------------------------------------------------
+objects:
+  - name: Floor
+    type: box
+    position: [0.0, 0.0, -0.05]
+    size: [20.0, 20.0, 0.1]
+    color: [0.35, 0.35, 0.37]
+    roughness: 0.9
+    metallic: 0.0
+    temperature_c: 20.0
+
+  - name: Wall
+    type: box
+    position: [-4.0, 0.0, 2.0]
+    size: [0.3, 12.0, 4.0]
+    color: [0.72, 0.68, 0.58]
+    roughness: 0.8
+    metallic: 0.0
+    temperature_c: 25.0
+
+  - name: HotPipe
+    type: cylinder
+    position: [-3.5, 0.0, 1.6]
+    radius: 0.15
+    height: 8.0
+    axis: Y
+    color: [0.72, 0.38, 0.20]
+    roughness: 0.35
+    metallic: 0.6
+    temperature_c: 80.0
+
+  - name: Anomaly
+    type: box
+    position: [-1.5, -1.0, 0.175]
+    size: [0.35, 0.35, 0.35]
+    color: [0.85, 0.08, 0.08]
+    roughness: 0.5
+    metallic: 0.0
+    temperature_c: 150.0
+
+  # Sin temperature_c: ambiente (default_c +- default_spread_c).
+  - name: Crate_01
+    type: box
+    position: [-2.2, 1.6, 0.3]
+    size: [0.6, 0.6, 0.6]
+    color: [0.55, 0.40, 0.22]
+    roughness: 0.8
+    metallic: 0.0
+    temperature_c: 18.0
+
+  - name: Crate_02
+    type: box
+    position: [-0.8, 2.3, 0.3]
+    size: [0.6, 0.6, 0.6]
+    color: [0.55, 0.40, 0.22]
+    roughness: 0.8
+    metallic: 0.0
+    temperature_c: 30.0
+
+  - name: Ball
+    type: sphere
+    position: [0.3, -2.2, 0.3]
+    radius: 0.3
+    color: [0.15, 0.35, 0.75]
+    roughness: 0.4
+    metallic: 0.0
+    temperature_c: 50.0
+
+# ---------------------------------------------------------------------------------------
+# Luces. Solo afectan al RGB y al sombreado (luminance_weight); no a las temperaturas.
+# El prim path de cada una es /World/Lights/<name>.
+#
+#   type              dome (cielo uniforme) | distant (sol)
+#   intensity         intensidad de la luz USD (atributo inputs:intensity)
+#   color             [r, g, b] 0..1 (opcional, blanco por defecto)
+#   angle_deg         (distant, opcional) diámetro angular del disco, grados: sombras más duras
+#                     cuanto menor
+#   rotation_xyz_deg  [rx, ry, rz] grados, orden XYZ (opcional). Una distant sin rotar apunta a -Z.
+# ---------------------------------------------------------------------------------------
+lights:
+  - name: Dome
+    type: dome
+    intensity: 600.0
+    color: [0.85, 0.9, 1.0]
+
+  - name: Sun
+    type: distant
+    intensity: 2500.0
+    angle_deg: 1.0
+    rotation_xyz_deg: [40.0, 0.0, 30.0]
+
+# ---------------------------------------------------------------------------------------
+# Cámara térmica (/World/ThermalCamera). Pose inicial; --auto-track y --robot la mueven.
+# ---------------------------------------------------------------------------------------
+camera:
+  # Posición de la cámara [x, y, z], m.
+  eye: [4.5, 3.0, 2.2]
+  # Punto al que mira [x, y, z], m (horizonte nivelado, +Z arriba).
+  target: [-2.5, 0.0, 1.0]
+  # Distancia focal, mm, sobre una apertura horizontal de 20.955 mm (~60° de FOV horizontal).
+  focal_length_mm: 18.0
+
+# ---------------------------------------------------------------------------------------
+# Robot inspector (--robot): cuerpo + 4 patas, cinemático, bajo /World/Robot.
+# ---------------------------------------------------------------------------------------
+robot:
+  # °C de todo el robot (la electrónica calienta el cuerpo).
+  temperature_c: 35.0
+  # Velocidad lineal y vertical con el teclado, m/s. La sobrescribe --speed.
+  speed_m_s: 0.5
+  # Velocidad de giro con el teclado, grados/s. La sobrescribe --turn-speed.
+  turn_speed_deg_s: 30.0
+  # Posición de la cámara respecto al origen del robot (en el suelo, bajo el centro del
+  # cuerpo; frente = +X), m. 0.32 = 2 cm delante de la cara frontal del cuerpo.
+  mount: [0.32, 0.0, 0.35]

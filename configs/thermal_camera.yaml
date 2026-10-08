@@ -1,0 +1,28 @@
+# Cámara pseudo-térmica: resolución y procesado 2D de la imagen.
+# La carga pseudo_thermal/config.py; los flags de CLI sobrescriben estos valores.
+
+# [ancho, alto] del render product, px (mínimo 32x32). La sobrescribe --resolution WxH.
+resolution: [640, 480]
+
+# Paleta inicial: whitehot (gris) | ironbow | hot | jet. La sobrescribe --palette; la tecla
+# 'c' de la ventana cv2 las recorre.
+palette: jet
+
+# Fracción 0..1 de la luminancia del RGB que se mezcla con la temperatura plana para dar
+# volumen y sombras: gris = (1 - w) * temperatura + w * luminancia. 0 = solo temperatura.
+luminance_weight: 0.15
+
+# Desenfoque gaussiano que imita la PSF de la óptica LWIR.
+blur:
+  # Lado del kernel, px. Entero impar. Mayor = el calor abarca más espacio. 1 = sin desenfoque.
+  kernel: 15
+  # Desviación típica de la gaussiana, px. Mayor = bordes de calor más suaves.
+  sigma: 3.0
+
+# Ruido gaussiano dependiente de la señal (más visible en las zonas frías/oscuras).
+noise:
+  # Estado inicial (true | false). La tecla 'n' de la ventana cv2 lo alterna.
+  enabled: true
+  # Desviación típica en las zonas más frías, niveles de gris (0..255); cae linealmente a 0
+  # en las más calientes. 0.0 = sin ruido. La semilla se fija con --seed.
+  sigma_max: 4.0

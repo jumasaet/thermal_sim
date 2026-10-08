@@ -1,0 +1,7 @@
+# Para que haga un movimiento mientras graba
+~/isaac_sim/python.sh scripts/live_pseudo_thermal.py   --autoplay --save-frames outputs/pseudo_thermal   --max-frames 90 --auto-track linear
+
+# Para que grabe la escena sin moverse
+~/isaac_sim/python.sh scripts/live_pseudo_thermal.py --autoplay --save-frames outputs/pseudo_thermal --max-frames 30
+
+

@@ -1,0 +1,19 @@
+# Salidas y datos de trabajo (los que ya tienes)
+/outputs/
+/examples/working/
+
+# Archivos comprimidos y binarios grandes
+*.zip
+
+# Archivos de caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Configuración local de IDEs y herramientas
+.vscode/
+.claude/
+
+# Archivos basura del sistema operativo (macOS)
+._*
+.DS_Store
