@@ -1,65 +1,65 @@
 # Pseudo-Thermal LWIR Simulator
 
-Simulador pseudo-térmico en tiempo real sobre NVIDIA Isaac Sim 6.1.0.
-Genera imágenes que imitan una cámara térmica LWIR procesando en 2D la
-segmentación por instancia y el RGB del viewport.
+Real-time pseudo-thermal simulator built on NVIDIA Isaac Sim 6.1.0.
+Generates images that mimic a LWIR thermal camera by processing in 2D the
+instance segmentation and viewport RGB.
 
-Parte del WP4 de GITCC/EMPLOI — simulador multimodal para robot
-cuadrúpedo de inspección industrial.
+Part of WP4 of GITCC/EMPLOI — multimodal simulator for a quadruped industrial
+inspection robot.
 
-## Requisitos
+## Requirements
 
 - NVIDIA Isaac Sim 6.1.0 (`~/isaac_sim/`)
 - Ubuntu 22.04, RTX 3090
-- ROS2 Humble (solo para publicación de topics)
-- ffmpeg (solo para codificar MP4)
+- ROS2 Humble (only for topic publishing)
+- ffmpeg (only for MP4 encoding)
 
-No hay dependencias de Python que instalar: NumPy, OpenCV, PyYAML y pytest
-ya vienen en el Python de Isaac (`~/isaac_sim/python.sh`).
+No Python dependencies to install: NumPy, OpenCV, PyYAML, and pytest are
+already bundled with Isaac's Python (`~/isaac_sim/python.sh`).
 
-## Setup rápido
+## Quick Setup
 
 ```bash
 cd ~/multimodal_sim/thermal_sim
 
-# Hacer ejecutable el launcher (una sola vez)
+# Make the launcher executable (once only)
 chmod +x launch_thermal.sh
 ```
 
-## Estructura
+## Structure
 
 ```
-run_pseudo_thermal.py            entrada: args → (relanzamiento ROS2) → SimulationApp → construir → loop
+run_pseudo_thermal.py            entry: args → (ROS2 relaunch) → SimulationApp → build → loop
 pseudo_thermal/
-    config.py                    carga y valida los YAML (dataclasses)
-    cli.py                       argparse y precedencia YAML < flags
-    processing.py                PseudoThermalProcessor: ids + RGB → gris 0..255
-    visualization.py             paletas, barra de escala, HUD, compose_frame
-    outputs.py                   ventana cv2 / PNG, frames, summary.json, MP4
-    ros2_publisher.py            nodo rclpy y publishers
-    scene_builder.py             escena USD desde el YAML              (Isaac)
-    sensors.py                   render product + anotadores           (Isaac)
-    robot.py                     robot, cámara montada, teclado, auto-track  (Isaac)
+    config.py                    loads and validates YAMLs (dataclasses)
+    cli.py                       argparse and precedence YAML < flags
+    processing.py                PseudoThermalProcessor: ids + RGB → gray 0..255
+    visualization.py             palettes, scale bar, HUD, compose_frame
+    outputs.py                   cv2 window / PNG, frames, summary.json, MP4
+    ros2_publisher.py            rclpy node and publishers
+    scene_builder.py             USD scene from YAML                    (Isaac)
+    sensors.py                   render product + annotators            (Isaac)
+    robot.py                     robot, mounted camera, keyboard, auto-track  (Isaac)
 configs/
-    scenes/demo_industrial.yaml  objetos, temperaturas, luces, cámara, robot
-    thermal_camera.yaml          resolución, paleta, luminancia, blur, ruido
-tests/                           tests de los módulos puros (sin Isaac)
+    scenes/demo_industrial.yaml  objects, temperatures, lights, camera, robot
+    thermal_camera.yaml          resolution, palette, luminance, blur, noise
+tests/                           tests for pure modules (no Isaac)
 scripts/
-    compare_frames.py            compara dos corridas de --save-frames
-    run_legacy_seeded.py         corre el legacy con el ruido sembrado (solo para comparar)
-    live_pseudo_thermal_legacy.py  script original de un solo archivo, sin modificar
-launch_thermal.sh                lanza run_pseudo_thermal.py con ROS2
+    compare_frames.py            compares two --save-frames runs
+    run_legacy_seeded.py         runs the legacy script with a fixed seed (comparison only)
+    live_pseudo_thermal_legacy.py  original single-file script, unmodified
+launch_thermal.sh                launches run_pseudo_thermal.py with ROS2
 ```
 
-**Regla de imports.** Los módulos marcados `(Isaac)` importan `pxr`/`omni`/`carb`
-y solo se pueden importar después de crear `SimulationApp`; lo hace
-`run_pseudo_thermal.py`. El resto son puros (NumPy, cv2, PyYAML) y no deben
-importar nada de Isaac: por eso se pueden testear sin abrir el simulador.
-`tests/test_purity.py` falla si alguien rompe la regla.
+**Import rule.** Modules marked `(Isaac)` import `pxr`/`omni`/`carb` and can
+only be imported after `SimulationApp` is created; `run_pseudo_thermal.py`
+handles that. The rest are pure (NumPy, cv2, PyYAML) and must not import
+anything from Isaac — this is why they can be tested without opening the
+simulator. `tests/test_purity.py` fails if anyone breaks the rule.
 
-## Modos de uso
+## Usage Modes
 
-### 1. Grabar con cámara en movimiento (demo)
+### 1. Record with moving camera (demo)
 
 ```bash
 ~/isaac_sim/python.sh run_pseudo_thermal.py \
@@ -69,11 +69,11 @@ importar nada de Isaac: por eso se pueden testear sin abrir el simulador.
     --auto-track linear
 ```
 
-Trayectorias disponibles: `linear` (paralela a la pared) o `circular`
-(arco de 90° alrededor de la escena). Si hay ffmpeg, al cerrar se codifica
-`outputs/pseudo_thermal_linear.mp4`.
+Available trajectories: `linear` (parallel to the wall) or `circular`
+(90° arc around the scene). If ffmpeg is available, `outputs/pseudo_thermal_linear.mp4`
+is encoded on exit.
 
-### 2. Grabar cámara estática
+### 2. Record static camera
 
 ```bash
 ~/isaac_sim/python.sh run_pseudo_thermal.py \
@@ -82,175 +82,175 @@ Trayectorias disponibles: `linear` (paralela a la pared) o `circular`
     --max-frames 30
 ```
 
-### 3. Publicar por ROS2 (visualización en RViz)
+### 3. Publish via ROS2 (visualization in RViz)
 
-**Terminal 1 — Isaac Sim** (NO hacer `source /opt/ros/humble/setup.bash` aquí):
+**Terminal 1 — Isaac Sim** (do NOT `source /opt/ros/humble/setup.bash` here):
 
 ```bash
 cd ~/multimodal_sim/thermal_sim
 ./launch_thermal.sh
-# o con opciones:
+# or with options:
 ./launch_thermal.sh --auto-track circular --save-frames outputs/demo --max-frames 90
 ```
 
-**Terminal 2 — ROS2** (esta SÍ lleva source):
+**Terminal 2 — ROS2** (source here):
 
 ```bash
 source /opt/ros/humble/setup.bash
 export ROS_DOMAIN_ID=15
 rviz2
-# o ver un topic específico:
+# or view a specific topic:
 rqt_image_view /thermal_sim/ir/image_raw
 ```
 
-Topics publicados:
+Published topics:
 
-| Topic | Encoding | Contenido |
-|-------|----------|-----------|
-| `/thermal_sim/ir/image_raw` | bgr8 | Imagen pseudo-térmica con paleta |
-| `/thermal_sim/rgb/image_raw` | rgba8 | Imagen RGB del viewport |
+| Topic | Encoding | Content |
+|-------|----------|---------|
+| `/thermal_sim/ir/image_raw` | bgr8 | Pseudo-thermal image with palette |
+| `/thermal_sim/rgb/image_raw` | rgba8 | Viewport RGB image |
 
-### 4. Modo interactivo con GUI (sin grabar)
+### 4. Interactive GUI mode (no recording)
 
 ```bash
 ~/isaac_sim/python.sh run_pseudo_thermal.py
 ```
 
-Abre Isaac Sim, pulsa Play manualmente, y mueve la cámara con el gizmo.
-La imagen térmica se actualiza en `/tmp/live_pseudo_thermal.png`
-(o en una ventana, si OpenCV tiene GUI; ver Notas).
+Opens Isaac Sim, press Play manually, and move the camera with the gizmo.
+The thermal image updates at `/tmp/live_pseudo_thermal.png`
+(or in a window if OpenCV has GUI support; see Notes).
 
-### 5. Robot inspector
+### 5. Inspector robot
 
 ```bash
-# Teclado: clic en el viewport de Isaac y WASD/flechas para mover, Q/E para subir/bajar
+# Keyboard: click the Isaac viewport and use WASD/arrows to move, Q/E to go up/down
 ~/isaac_sim/python.sh run_pseudo_thermal.py --autoplay --robot
 
-# El robot recorre el trayecto solo
+# Robot follows the path automatically
 ~/isaac_sim/python.sh run_pseudo_thermal.py --autoplay --robot --auto-track linear \
     --save-frames outputs/robot_demo --max-frames 90
 ```
 
-Con la ventana `Pseudo-Thermal LWIR` enfocada (solo si OpenCV tiene GUI):
-`q`/`Esc` cierra, `c` cambia de paleta, `n` activa o desactiva el ruido.
+With the `Pseudo-Thermal LWIR` window focused (only if OpenCV has GUI):
+`q`/`Esc` closes, `c` cycles palette, `n` toggles noise.
 
-## Referencia de flags
+## Flag Reference
 
-| Flag | Default | Descripción |
+| Flag | Default | Description |
 |------|---------|-------------|
-| `--scene PATH` | `configs/scenes/demo_industrial.yaml` | YAML de escena |
-| `--camera-config PATH` | `configs/thermal_camera.yaml` | YAML de la cámara térmica |
-| `--seed N` | aleatoria | Semilla del ruido (dos corridas con la misma semilla llevan el mismo ruido) |
-| `--autoplay` | off | Da Play al timeline automáticamente |
-| `--save-frames DIR` | off | Guarda frames como `DIR/frame_NNNNN.png` + `summary.json` |
-| `--max-frames N` | 0 (ilimitado) | Para después de N frames y cierra |
-| `--auto-track linear\|circular` | off | Mueve la cámara (o el robot) automáticamente |
-| `--ros2` | off | Publica topics ROS2 (usar con `launch_thermal.sh`) |
-| `--robot` | off | Monta la cámara en el robot inspector |
-| `--speed M_S` | YAML de escena (0.5) | `--robot`: velocidad lineal y vertical, m/s |
-| `--turn-speed DEG_S` | YAML de escena (30) | `--robot`: velocidad de giro, grados/s |
-| `--resolution WxH` | YAML de cámara (640x480) | Resolución del render product |
-| `--palette whitehot\|ironbow\|hot\|jet` | YAML de cámara (jet) | Paleta inicial |
-| `--display auto\|cv2\|png` | auto | Método de visualización |
-| `--png-path PATH` | `/tmp/live_pseudo_thermal.png` | Salida en modo PNG |
-| `--renderer` | RaytracedLighting | Renderer de Isaac |
+| `--scene PATH` | `configs/scenes/demo_industrial.yaml` | Scene YAML |
+| `--camera-config PATH` | `configs/thermal_camera.yaml` | Thermal camera YAML |
+| `--seed N` | random | Noise seed (two runs with the same seed produce identical noise) |
+| `--autoplay` | off | Automatically press Play on the timeline |
+| `--save-frames DIR` | off | Save frames as `DIR/frame_NNNNN.png` + `summary.json` |
+| `--max-frames N` | 0 (unlimited) | Stop and close after N frames |
+| `--auto-track linear\|circular` | off | Move the camera (or robot) automatically |
+| `--ros2` | off | Publish ROS2 topics (use with `launch_thermal.sh`) |
+| `--robot` | off | Mount the camera on the inspector robot |
+| `--speed M_S` | scene YAML (0.5) | `--robot`: linear and vertical speed, m/s |
+| `--turn-speed DEG_S` | scene YAML (30) | `--robot`: turn speed, degrees/s |
+| `--resolution WxH` | camera YAML (640x480) | Render product resolution |
+| `--palette whitehot\|ironbow\|hot\|jet` | camera YAML (jet) | Initial palette |
+| `--display auto\|cv2\|png` | auto | Visualization method |
+| `--png-path PATH` | `/tmp/live_pseudo_thermal.png` | Output path in PNG mode |
+| `--renderer` | RaytracedLighting | Isaac renderer |
 
-**Precedencia:** valen los valores de los YAML; un flag de CLI, si se pasa,
-los sobrescribe para esa corrida.
+**Precedence:** YAML values apply by default; a CLI flag, when passed,
+overrides them for that run.
 
-## Editar la escena desde el YAML
+## Editing the Scene from YAML
 
-Todo lo que antes eran constantes del script está en dos archivos, con cada
-campo comentado (qué es y en qué unidades):
+Everything that used to be hardcoded constants in the script now lives in two
+files, with each field commented (what it is and what units it uses):
 
 - [configs/scenes/demo_industrial.yaml](configs/scenes/demo_industrial.yaml):
-  modelo térmico, objetos, luces, cámara y robot.
-- [configs/thermal_camera.yaml](configs/thermal_camera.yaml): resolución,
-  paleta, peso de la luminancia, blur y ruido.
+  thermal model, objects, lights, camera, and robot.
+- [configs/thermal_camera.yaml](configs/thermal_camera.yaml): resolution,
+  palette, luminance weight, blur, and noise.
 
-Para una escena propia, copia el YAML de demo y pásalo con `--scene`:
+For a custom scene, copy the demo YAML and pass it with `--scene`:
 
 ```bash
-cp configs/scenes/demo_industrial.yaml configs/scenes/mi_escena.yaml
-~/isaac_sim/python.sh run_pseudo_thermal.py --scene configs/scenes/mi_escena.yaml
+cp configs/scenes/demo_industrial.yaml configs/scenes/my_scene.yaml
+~/isaac_sim/python.sh run_pseudo_thermal.py --scene configs/scenes/my_scene.yaml
 ```
 
-### Objetos y temperaturas
+### Objects and Temperatures
 
-Cada entrada de `objects` crea el prim `/World/<name>`:
+Each entry under `objects` creates the prim `/World/<name>`:
 
 ```yaml
 objects:
-  - name: Tank              # único; prim /World/Tank
+  - name: Tank              # unique; prim /World/Tank
     type: cylinder          # box | cylinder | sphere
-    position: [1.0, 1.0, 0.5]   # centro, m
-    radius: 0.4             # cylinder y sphere, m
+    position: [1.0, 1.0, 0.5]   # center, m
+    radius: 0.4             # cylinder and sphere, m
     height: 1.0             # cylinder, m
     axis: Z                 # cylinder: X | Y | Z
     color: [0.2, 0.6, 0.3]  # RGB 0..1
-    roughness: 0.5          # opcional (0.6)
-    metallic: 0.0           # opcional (0.0)
-    temperature_c: 60.0     # opcional, °C
+    roughness: 0.5          # optional (0.6)
+    metallic: 0.0           # optional (0.0)
+    temperature_c: 60.0     # optional, °C
 ```
 
-Un `box` lleva `size: [x, y, z]` en vez de `radius`/`height`/`axis`.
+A `box` uses `size: [x, y, z]` instead of `radius`/`height`/`axis`.
 
-- **Cambiar una temperatura:** edita `temperature_c` del objeto.
-- **Objeto a temperatura ambiente:** quita `temperature_c`. Recibe
-  `thermal.default_c` ± `thermal.default_spread_c` (offset fijo por hash del
-  prim path, así dos objetos sin temperatura se distinguen entre sí).
-- **Rango de visualización:** `thermal.range_c: [mín, máx]` es lo que se mapea
-  a gris 0..255 y a la barra de escala. El fondo queda siempre en el mínimo.
-- Los prims hijos heredan la temperatura del padre (`/World/Tank/Mesh` usa la
-  de `/World/Tank`).
+- **Change a temperature:** edit `temperature_c` on the object.
+- **Ambient-temperature object:** remove `temperature_c`. It receives
+  `thermal.default_c` ± `thermal.default_spread_c` (fixed offset per prim
+  path hash, so two objects without a temperature are visually distinct).
+- **Visualization range:** `thermal.range_c: [min, max]` maps to gray 0..255
+  and to the scale bar. The background is always clamped to the minimum.
+- Child prims inherit the parent's temperature (`/World/Tank/Mesh` uses
+  `/World/Tank`'s temperature).
 
-Valores de la escena de demo:
+Demo scene values:
 
-| Objeto | Path USD | Temperatura |
+| Object | USD Path | Temperature |
 |--------|----------|-------------|
-| Suelo | `/World/Floor` | 20 °C |
-| Pared | `/World/Wall` | 25 °C |
-| Tubo caliente | `/World/HotPipe` | 80 °C |
-| Anomalía | `/World/Anomaly` | 150 °C |
+| Floor | `/World/Floor` | 20 °C |
+| Wall | `/World/Wall` | 25 °C |
+| Hot pipe | `/World/HotPipe` | 80 °C |
+| Anomaly | `/World/Anomaly` | 150 °C |
 | Robot (`--robot`) | `/World/Robot` | 35 °C |
-| Cajas y bola | `/World/Crate_01`, `/World/Crate_02`, `/World/Ball` | 22 °C ± 2 °C |
+| Crates and ball | `/World/Crate_01`, `/World/Crate_02`, `/World/Ball` | 22 °C ± 2 °C |
 
-Rango de visualización: 15–160 °C.
+Visualization range: 15–160 °C.
 
-### Errores de configuración
+### Configuration Errors
 
-Los YAML se validan antes de abrir Isaac Sim. Una clave desconocida, un campo
-que falta, un tipo incorrecto o un nombre de objeto repetido paran el
-programa con el archivo y el campo en el mensaje:
+YAMLs are validated before Isaac Sim opens. An unknown key, a missing field,
+an incorrect type, or a duplicate object name stops the program with the file
+and field in the error message:
 
 ```
-[pseudo-thermal] Configuración inválida: mi_escena.yaml > objects[4] (Crate_01): clave desconocida 'colour' (válidas: name, type, ...)
-[pseudo-thermal] Configuración inválida: mi_escena.yaml > objects: nombre de objeto duplicado 'Crate_01'
+[pseudo-thermal] Invalid configuration: my_scene.yaml > objects[4] (Crate_01): unknown key 'colour' (valid: name, type, ...)
+[pseudo-thermal] Invalid configuration: my_scene.yaml > objects: duplicate object name 'Crate_01'
 ```
 
-Los nombres `Looks`, `Lights`, `Robot` y `ThermalCamera` están reservados.
+The names `Looks`, `Lights`, `Robot`, and `ThermalCamera` are reserved.
 
 ## Tests
 
-Cubren los módulos puros (configuración, procesado térmico, CLI) y no abren
-Isaac Sim; tardan un par de segundos:
+Cover the pure modules (configuration, thermal processing, CLI) and do not
+open Isaac Sim; they run in a couple of seconds:
 
 ```bash
 cd ~/multimodal_sim/thermal_sim
 ~/isaac_sim/python.sh -m pytest tests/
 ```
 
-`pytest.ini` desactiva los plugins de pytest de ROS, que no cargan en el
-Python 3.12 de Isaac si el terminal tiene hecho `source /opt/ros/humble/setup.bash`.
+`pytest.ini` disables the ROS pytest plugins, which fail to load in Isaac's
+Python 3.12 if the terminal has `source /opt/ros/humble/setup.bash` active.
 
-## Comparar con el script original
+## Comparing Against the Original Script
 
-`scripts/live_pseudo_thermal_legacy.py` es el script original de un solo
-archivo, sin modificar. Para comprobar que el paquete produce la misma imagen
-se graban los mismos 20 frames con cada uno y se comparan. `--palette whitehot`
-hace que la diferencia se lea en niveles de gris, y la semilla que el ruido
-sea el mismo (el legacy no tiene `--seed`; `run_legacy_seeded.py` lo ejecuta
-tal cual, fijándole la semilla desde fuera).
+`scripts/live_pseudo_thermal_legacy.py` is the original single-file script,
+unmodified. To verify that the package produces the same image, record the
+same 20 frames with each and compare them. `--palette whitehot` makes
+differences readable in gray levels, and the seed ensures identical noise
+(the legacy script has no `--seed`; `run_legacy_seeded.py` runs it as-is
+with the seed injected from outside).
 
 ```bash
 cd ~/multimodal_sim/thermal_sim
@@ -260,35 +260,35 @@ cd ~/multimodal_sim/thermal_sim
     --autoplay --auto-track linear --max-frames 20 --palette whitehot \
     --save-frames outputs/compare_legacy/frames
 
-# 2. Paquete nuevo
+# 2. New package
 ~/isaac_sim/python.sh run_pseudo_thermal.py --seed 0 \
     --autoplay --auto-track linear --max-frames 20 --palette whitehot \
     --save-frames outputs/compare_refactor/frames
 
-# 3. Comparación (media y máximo de la diferencia absoluta por frame)
+# 3. Comparison (mean and max absolute difference per frame)
 ~/isaac_sim/python.sh scripts/compare_frames.py \
     outputs/compare_legacy/frames outputs/compare_refactor/frames
 ```
 
-Se espera una diferencia media global por debajo de 1 nivel de gris: lo único
-que puede variar entre dos corridas es la luminancia del render RTX, que pesa
-un 15 % en la imagen. `compare_frames.py` termina con código 0 si se cumple.
+The expected global mean difference is below 1 gray level: the only source of
+variation between two runs is the RTX render luminance, which contributes 15%
+to the image. `compare_frames.py` exits with code 0 if the threshold is met.
 
-## Notas importantes
+## Important Notes
 
-- **ROS2 y Isaac no comparten terminal.** Las libs de spdlog del
-  sistema (`/opt/ros/humble/lib`) chocan con las de Isaac. Usar
-  `launch_thermal.sh` o setear manualmente:
+- **ROS2 and Isaac do not share a terminal.** The system spdlog libs
+  (`/opt/ros/humble/lib`) conflict with Isaac's. Use `launch_thermal.sh` or
+  set manually:
 ```bash
   export LD_LIBRARY_PATH=/home/jumasaet/isaac_sim/exts/isaacsim.ros2.core/humble/lib
   export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
   export ROS_DOMAIN_ID=15
 ```
-- **OpenCV headless.** Isaac trae `opencv-python-headless`. Para ventana
-  `cv2.imshow`:
+- **Headless OpenCV.** Isaac ships `opencv-python-headless`. For `cv2.imshow`
+  window support:
 ```bash
   ~/isaac_sim/python.sh -m pip install --no-deps opencv-python
 ```
-- Los frames guardados no llevan overlay de texto (FPS, Tmax) para
-  que sirvan como dato limpio.
-- `summary.json` se escribe al cerrar con estadísticas de la corrida.
+- Saved frames carry no text overlay (FPS, Tmax) so they can be used as clean
+  data.
+- `summary.json` is written on close with run statistics.
